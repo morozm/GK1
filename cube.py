@@ -10,13 +10,15 @@ WIDTH, HEIGHT = 900, 900
 pygame.display.set_caption("3D Cube")
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 scale = 50
-angle = 0
 distanceX = 0
 distanceY = 0
-distanceZ = 5
+distanceZ = 10
 moveX = 0
 moveY = 0
 moveZ = 0
+angleX = 0
+angleY = 0
+angleZ = 0
 number_of_figures = 4
 center = [WIDTH/2, HEIGHT/2]
 
@@ -64,6 +66,8 @@ projection_matrix = np.matrix([
     [0, 0, float(1/distanceZ), 1],
 ])
 
+
+
 for i in range(number_of_figures):
     projected_points = [[
         [n, n] for n in range(len(figures[i]))
@@ -72,6 +76,35 @@ for i in range(number_of_figures):
 def connect_points(figure, i, j):
     pygame.draw.line(
         screen, WHITE, (projected_points[figure][i][0], projected_points[figure][i][1]), (projected_points[figure][j][0], projected_points[figure][j][1]))
+
+def act():
+    i = 0
+    fig = 0
+    for figure in figures:
+        for point in figure:
+            point = point.reshape(3, 1)
+            point=np.r_[point, np.matrix([1])]
+
+            rotated2d = point
+            rotated2d = np.dot(rotation_z, rotated2d)
+            rotated2d = np.dot(rotation_y, rotated2d)
+            rotated2d = np.dot(rotation_x, rotated2d)
+
+            translated = rotated2d
+            translated = np.dot(translation, translated)
+
+            projected2d = translated
+            projected2d[0][0]=projected2d[0][0]*distanceZ/(projected2d[2][0])
+            projected2d[1][0]=projected2d[1][0]*distanceZ/(projected2d[2][0])
+            projected2d[2][0]=distanceZ
+            x=int(projected2d[0][0] * scale + center[0])
+            y=int(projected2d[1][0] * scale + center[1])
+            projected_points[fig][i] = [x, y]
+            pygame.draw.circle(screen, ORANGE, (x,y), 5)
+            i+=1
+        i = 0
+        fig+=1
+    
 
 clock = pygame.time.Clock()
 while True:
@@ -85,6 +118,46 @@ while True:
                 pygame.quit()
                 exit()
 
+            ### Movement ###
+            if event.key == pygame.K_w:
+                moveZ += 0.1
+                act()
+            if event.key == pygame.K_s:
+                moveZ -= 0.1
+                act()
+            if event.key == pygame.K_a:
+                moveX -= 0.1
+                act()
+            if event.key == pygame.K_d:
+                moveX += 0.1
+                act()
+            if event.key == pygame.K_q:
+                moveY -= 0.1
+                act()
+            if event.key == pygame.K_e:
+                moveY += 0.1
+                act()
+            
+            ### Rotation ###
+            if event.key == pygame.K_t:
+                angleZ += 0.1
+                act()
+            if event.key == pygame.K_g:
+                angleZ -= 0.1
+                act()
+            if event.key == pygame.K_f:
+                angleX -= 0.1
+                act()
+            if event.key == pygame.K_h:
+                angleX += 0.1
+                act()
+            if event.key == pygame.K_r:
+                angleY -= 0.1
+                act()
+            if event.key == pygame.K_y:
+                angleY += 0.1
+                act()
+
     screen.fill(BLACK)
 
     translation = np.matrix([
@@ -95,55 +168,27 @@ while True:
     ])
 
     rotation_z = np.matrix([
-        [cos(angle),    -sin(angle),    0,              0],
-        [sin(angle),    cos(angle),     0,              0],
+        [cos(angleZ),   -sin(angleZ),   0,              0],
+        [sin(angleZ),   cos(angleZ),    0,              0],
         [0,             0,              1,              0],
         [0,             0,              0,              1],
     ])
 
     rotation_y = np.matrix([
-        [cos(angle),    0,              sin(angle),     0],
+        [cos(angleY),   0,              sin(angleY),    0],
         [0,             1,              0,              0],
-        [-sin(angle),   0,              cos(angle),     0],
+        [-sin(angleY),  0,              cos(angleY),    0],
         [0,             0,              0,              1],
     ])
 
     rotation_x = np.matrix([
         [1,             0,              0,              0],
-        [0,             cos(angle),     -sin(angle),    0],
-        [0,             sin(angle),     cos(angle),     0],
+        [0,             cos(angleX),    -sin(angleX),   0],
+        [0,             sin(angleX),    cos(angleX),    0],
         [0,             0,              0,              1],
     ])
-    angle += 0.01
-    moveX += 0.01
 
-    i = 0
-    fig = 0
-    for figure in figures:
-        for point in figure:
-            point = point.reshape(3, 1)
-            point=np.r_[point, np.matrix([1])]
-
-            rotated2d = point
-            # rotated2d = np.dot(rotation_z, rotated2d)
-            rotated2d = np.dot(rotation_y, rotated2d)
-            # rotated2d /= rotated2d[3][0]
-            # rotated2d = np.dot(rotation_x, rotated2d)
-
-            translated = rotated2d
-            # translated = np.dot(translation, translated)
-
-            projected2d = translated
-            projected2d[0][0]=projected2d[0][0]*distanceZ/(projected2d[2][0]+distanceZ)
-            projected2d[1][0]=projected2d[1][0]*distanceZ/(projected2d[2][0]+distanceZ)
-            projected2d[2][0]=0
-            x=int(projected2d[0][0] * scale + center[0])
-            y=int(projected2d[1][0] * scale + center[1])
-            projected_points[fig][i] = [x, y]
-            pygame.draw.circle(screen, ORANGE, (x,y), 5)
-            i+=1
-        i = 0
-        fig+=1
+    act()
 
     connect_points(0, 0, 1)
     connect_points(0, 1, 2)
