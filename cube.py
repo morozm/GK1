@@ -9,9 +9,9 @@ BLACK = (0, 0, 0)
 WIDTH, HEIGHT = 900, 900
 pygame.display.set_caption("3D Cube")
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
+MS = 0.5
+AS = 0.1
 scale = 50
-distanceX = 0
-distanceY = 0
 distanceZ = 10
 moveX = 0
 moveY = 0
@@ -58,15 +58,6 @@ figures[3].append(np.matrix([ 1,    -3,     -1]))
 figures[3].append(np.matrix([ 3,    -3,     -1]))
 figures[3].append(np.matrix([ 3,    -1,     -1]))
 figures[3].append(np.matrix([ 1,    -1,     -1]))
-    
-projection_matrix = np.matrix([
-    [1, 0, 0, 0],
-    [0, 1, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, float(1/distanceZ), 1],
-])
-
-
 
 for i in range(number_of_figures):
     projected_points = [[
@@ -86,21 +77,26 @@ def act():
             point=np.r_[point, np.matrix([1])]
 
             rotated2d = point
+            rotated2d = np.dot(translation2, rotated2d)
             rotated2d = np.dot(rotation_z, rotated2d)
             rotated2d = np.dot(rotation_y, rotated2d)
             rotated2d = np.dot(rotation_x, rotated2d)
+            rotated2d = np.dot(translation3, rotated2d)
+            # rotated2d = rotated2d * float(1/rotated2d[3][0])
 
             translated = rotated2d
             translated = np.dot(translation, translated)
 
             projected2d = translated
-            projected2d[0][0]=projected2d[0][0]*distanceZ/(projected2d[2][0])
-            projected2d[1][0]=projected2d[1][0]*distanceZ/(projected2d[2][0])
-            projected2d[2][0]=distanceZ
+            projected2d = np.dot(projection_matrix, projected2d)
+            projected2d = projected2d * float(1/projected2d[3][0])
+            # projected2d[0][0]=projected2d[0][0]*distanceZ/(projected2d[2][0])
+            # projected2d[1][0]=projected2d[1][0]*distanceZ/(projected2d[2][0])
+            # projected2d[2][0]=distanceZ
             x=int(projected2d[0][0] * scale + center[0])
             y=int(projected2d[1][0] * scale + center[1])
             projected_points[fig][i] = [x, y]
-            pygame.draw.circle(screen, ORANGE, (x,y), 5)
+            # pygame.draw.circle(screen, ORANGE, (x,y), 5)
             i+=1
         i = 0
         fig+=1
@@ -120,50 +116,79 @@ while True:
 
             ### Movement ###
             if event.key == pygame.K_w:
-                moveZ += 0.1
+                moveZ -= MS
                 act()
             if event.key == pygame.K_s:
-                moveZ -= 0.1
+                moveZ += MS
                 act()
             if event.key == pygame.K_a:
-                moveX -= 0.1
+                moveX += MS
                 act()
             if event.key == pygame.K_d:
-                moveX += 0.1
+                moveX -= MS
                 act()
             if event.key == pygame.K_q:
-                moveY -= 0.1
+                moveY += MS
                 act()
             if event.key == pygame.K_e:
-                moveY += 0.1
+                moveY -= MS
                 act()
             
             ### Rotation ###
-            if event.key == pygame.K_t:
-                angleZ += 0.1
-                act()
-            if event.key == pygame.K_g:
-                angleZ -= 0.1
-                act()
-            if event.key == pygame.K_f:
-                angleX -= 0.1
-                act()
-            if event.key == pygame.K_h:
-                angleX += 0.1
-                act()
             if event.key == pygame.K_r:
-                angleY -= 0.1
+                angleZ -= AS
                 act()
             if event.key == pygame.K_y:
-                angleY += 0.1
+                angleZ += AS
+                act()
+            if event.key == pygame.K_t:
+                angleX -= AS
+                act()
+            if event.key == pygame.K_g:
+                angleX += AS
+                act()
+            if event.key == pygame.K_f:
+                angleY += AS
+                act()
+            if event.key == pygame.K_h:
+                angleY -= AS
+                act()
+
+            ### Zoom ###
+            if event.key == pygame.K_z:
+                scale*=1.5
+                act()
+            if event.key == pygame.K_x:
+                scale/=1.5
                 act()
 
     screen.fill(BLACK)
+
+    projection_matrix = np.matrix([
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, float(1/distanceZ), 1],
+    ])
 
     translation = np.matrix([
         [1,             0,              0,              moveX],
         [0,             1,              0,              moveY],
         [0,             0,              1,              moveZ],
+        [0,             0,              0,              1],
+    ])
+
+    translation2 = np.matrix([
+        [1,             0,              0,              0],
+        [0,             1,              0,              0],
+        [0,             0,              1,              distanceZ],
+        [0,             0,              0,              1],
+    ])
+
+    translation3 = np.matrix([
+        [1,             0,              0,              0],
+        [0,             1,              0,              0],
+        [0,             0,              1,              -distanceZ],
         [0,             0,              0,              1],
     ])
 
