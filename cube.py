@@ -10,15 +10,13 @@ WIDTH, HEIGHT = 900, 900
 pygame.display.set_caption("3D Cube")
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 MS = 0.5
-AS = 0.1
+MS2 = 0.2
+AS = 0.05
+AS2 = 0.02
+ZS = 1.1
+ZS2 = 1.04
 scale = 50
 distanceZ = 10
-moveX = 0
-moveY = 0
-moveZ = 0
-angleX = 0
-angleY = 0
-angleZ = 0
 number_of_figures = 4
 center = [WIDTH/2, HEIGHT/2]
 
@@ -76,31 +74,68 @@ def init_act():
 
 init_act()
 
+def translate(moveX, moveY, moveZ):
+    translation = np.matrix([
+        [1,             0,              0,              moveX],
+        [0,             1,              0,              moveY],
+        [0,             0,              1,              moveZ],
+        [0,             0,              0,              1],
+    ])
+    for i in range(len(figures)):
+        for j in range(len(figures[i])):
+            translated = figures[i][j]
+            translated = np.dot(translation, translated)
+            if(translated[3][0]!=0):
+                translated /= translated[3][0] #normalizacja
+            figures[i][j]=translated
+
+def rotateX(angleX):
+    rotation_x = np.matrix([
+        [1,             0,              0,              0],
+        [0,             cos(angleX),    -sin(angleX),   0],
+        [0,             sin(angleX),    cos(angleX),    0],
+        [0,             0,              0,              1],
+    ])
+    for i in range(len(figures)):
+        for j in range(len(figures[i])):
+            rotated2d = figures[i][j]
+            rotated2d = np.dot(rotation_x, rotated2d)
+            figures[i][j]=rotated2d
+
+def rotateY(angleY):
+    rotation_y = np.matrix([
+        [cos(angleY),   0,              sin(angleY),    0],
+        [0,             1,              0,              0],
+        [-sin(angleY),  0,              cos(angleY),    0],
+        [0,             0,              0,              1],
+    ])
+    for i in range(len(figures)):
+        for j in range(len(figures[i])):
+            rotated2d = figures[i][j]
+            rotated2d = np.dot(rotation_y, rotated2d)
+            figures[i][j]=rotated2d       
+
+def rotateZ(angleZ):
+    rotation_z = np.matrix([
+        [cos(angleZ),   -sin(angleZ),   0,              0],
+        [sin(angleZ),   cos(angleZ),    0,              0],
+        [0,             0,              1,              0],
+        [0,             0,              0,              1],
+    ])
+    for i in range(len(figures)):
+        for j in range(len(figures[i])):
+            rotated2d = figures[i][j]
+            rotated2d = np.dot(rotation_z, rotated2d)
+            figures[i][j]=rotated2d
+
 def act():
     num = 0
     fig = 0
     for i in range(len(figures)):
         for j in range(len(figures[i])):
-            rotated2d = figures[i][j]
-            rotated2d = np.dot(rotation_z, rotated2d)
-            rotated2d = rotated2d /rotated2d[3][0]
-            rotated2d = np.dot(rotation_y, rotated2d)
-            rotated2d = rotated2d /rotated2d[3][0]
-            rotated2d = np.dot(rotation_x, rotated2d)
-            rotated2d = rotated2d /rotated2d[3][0]
-
-            translated = rotated2d
-            translated = np.dot(translation, translated)
-            translated = translated /translated[3][0]
-
-            figures[i][j]=translated
-
-            projected2d = translated
-            projected2d = np.dot(projection_matrix, projected2d)
-            projected2d = projected2d /projected2d[3][0]
-
-            # x=int(projected2d[0][0] * scale + center[0])
-            # y=int(projected2d[1][0] * scale + center[1])
+            projected2d = np.dot(projection_matrix, figures[i][j])
+            if(projected2d[3][0]!=0):
+                projected2d /= projected2d[3][0] #normalizacja
             x=int(projected2d[0][0]/projected2d[2][0]*distanceZ*scale+center[0])
             y=int(center[1]-projected2d[1][0]/projected2d[2][0]*distanceZ*scale)
             projected_points[fig][num] = [x, y]
@@ -108,7 +143,6 @@ def act():
             num+=1
         num = 0
         fig+=1
-    
 
 clock = pygame.time.Clock()
 while True:
@@ -124,51 +158,68 @@ while True:
 
             ### Movement ###
             if event.key == pygame.K_w:
-                moveZ += MS
-                act()
+                translate(0, 0, MS)
             if event.key == pygame.K_s:
-                moveZ -= MS
-                act()
+                translate(0, 0, -MS)
             if event.key == pygame.K_a:
-                moveX -= MS
-                act()
+                translate(-MS, 0, 0)
             if event.key == pygame.K_d:
-                moveX += MS
-                act()
+                translate(MS, 0, 0)
             if event.key == pygame.K_q:
-                moveY -= MS
-                act()
+                translate(0, MS, 0)
             if event.key == pygame.K_e:
-                moveY += MS
-                act()
+                translate(0, -MS, 0)
             
             ### Rotation ###
             if event.key == pygame.K_r:
-                angleZ -= AS
-                act()
+                rotateZ(AS)
             if event.key == pygame.K_y:
-                angleZ += AS
-                act()
+                rotateZ(-AS)
             if event.key == pygame.K_t:
-                angleX -= AS
-                act()
+                rotateX(AS)
             if event.key == pygame.K_g:
-                angleX += AS
-                act()
+                rotateX(-AS)
             if event.key == pygame.K_f:
-                angleY += AS
-                act()
+                rotateY(AS)
             if event.key == pygame.K_h:
-                angleY -= AS
-                act()
+                rotateY(-AS)
 
             ### Zoom ###
             if event.key == pygame.K_z:
-                scale*=1.5
-                act()
+                scale*=ZS
             if event.key == pygame.K_x:
-                scale/=1.5
-                act()
+                scale/=ZS
+
+        if pygame.key.get_pressed()[pygame.K_w] == True:
+            translate(0, 0, MS2)
+        if pygame.key.get_pressed()[pygame.K_s] == True:
+            translate(0, 0, -MS2)
+        if pygame.key.get_pressed()[pygame.K_a] == True:
+            translate(-MS2, 0, 0)
+        if pygame.key.get_pressed()[pygame.K_d] == True:
+            translate(MS2, 0, 0)
+        if pygame.key.get_pressed()[pygame.K_q] == True:
+            translate(0, MS2, 0)
+        if pygame.key.get_pressed()[pygame.K_e] == True:
+            translate(0, -MS2, 0)
+            
+        if pygame.key.get_pressed()[pygame.K_r] == True:
+            rotateZ(AS2)
+        if pygame.key.get_pressed()[pygame.K_y] == True:
+            rotateZ(-AS2)
+        if pygame.key.get_pressed()[pygame.K_t] == True:
+            rotateX(AS2)
+        if pygame.key.get_pressed()[pygame.K_g] == True:
+            rotateX(-AS2)
+        if pygame.key.get_pressed()[pygame.K_f] == True:
+            rotateY(AS2)
+        if pygame.key.get_pressed()[pygame.K_h] == True:
+            rotateY(-AS2)
+
+        if pygame.key.get_pressed()[pygame.K_z] == True:
+            scale*=ZS2
+        if pygame.key.get_pressed()[pygame.K_x] == True:
+            scale/=ZS2
 
     screen.fill(BLACK)
 
@@ -177,34 +228,6 @@ while True:
         [0, 1, 0, 0],
         [0, 0, 1, 0],
         [0, 0, float(1/distanceZ), 0],
-    ])
-
-    translation = np.matrix([
-        [1,             0,              0,              moveX],
-        [0,             1,              0,              moveY],
-        [0,             0,              1,              moveZ],
-        [0,             0,              0,              1],
-    ])
-
-    rotation_z = np.matrix([
-        [cos(angleZ),   -sin(angleZ),   0,              0],
-        [sin(angleZ),   cos(angleZ),    0,              0],
-        [0,             0,              1,              0],
-        [0,             0,              0,              1],
-    ])
-
-    rotation_y = np.matrix([
-        [cos(angleY),   0,              sin(angleY),    0],
-        [0,             1,              0,              0],
-        [-sin(angleY),  0,              cos(angleY),    0],
-        [0,             0,              0,              1],
-    ])
-
-    rotation_x = np.matrix([
-        [1,             0,              0,              0],
-        [0,             cos(angleX),    -sin(angleX),   0],
-        [0,             sin(angleX),    cos(angleX),    0],
-        [0,             0,              0,              1],
     ])
 
     act()
